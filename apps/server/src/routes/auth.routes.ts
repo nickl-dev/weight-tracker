@@ -1,0 +1,13 @@
+import { Router } from "express";
+
+const router = Router();
+
+router.get("/me", (req, res) => {});
+
+router.post("/register", (req, res) => {});
+
+router.post("/login", (req, res) => {});
+
+router.post("/logout", (req, res) => {});
+
+export default router;
