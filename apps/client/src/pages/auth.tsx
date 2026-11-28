@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { Check, Circle, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setUser } from "@/features/auth.slice";
+import { setUser, clearError } from "@/features/auth.slice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +13,11 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-
-const requirements = [
-  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-  { label: "One number", test: (p: string) => /\d/.test(p) }
-];
+import { Spinner } from "@/components/ui/spinner";
+import {
+  PasswordRequirements,
+  isValidPassword
+} from "@/components/password-requirements";
 
 function Background() {
   return (
@@ -44,15 +42,15 @@ function Background() {
 }
 
 export default function Auth() {
-  const user = useAppSelector((s) => s.auth.user);
+  const { loading, error, user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const isRegister = mode === "register";
-  const allMet = requirements.every((r) => r.test(password));
-  const canSubmit = email && password && (!isRegister || allMet);
+  const canSubmit =
+    email && password && (!isRegister || isValidPassword(password));
 
   if (user) return <Navigate to="/dashboard" replace />;
 
@@ -61,6 +59,11 @@ export default function Auth() {
     // TODO: replace with Supabase auth
     dispatch(setUser({ id: "1", email }));
   };
+
+  function toggle() {
+    setMode(isRegister ? "login" : "register");
+    dispatch(clearError());
+  }
 
   return (
     <div className="isolate flex min-h-[calc(100vh-10rem)] items-center justify-center">
@@ -103,27 +106,13 @@ export default function Auth() {
               />
             </div>
 
-            {isRegister && (
-              <ul className="space-y-1.5 text-sm">
-                {requirements.map((r) => {
-                  const met = r.test(password);
-                  return (
-                    <li
-                      key={r.label}
-                      className={`flex items-center gap-2 transition-colors ${
-                        met ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    >
-                      {met ? <Check size={14} /> : <Circle size={14} />}
-                      {r.label}
-                    </li>
-                  );
-                })}
-              </ul>
+            {isRegister && <PasswordRequirements password={password} />}
+            {error && (
+              <p className="text-sm text-destructive text-center">{error}</p>
             )}
 
             <Button type="submit" disabled={!canSubmit} className="w-full">
-              {isRegister ? "Sign up" : "Log in"}
+              {loading ? <Spinner /> : isRegister ? "Sign up" : "Log in"}
             </Button>
           </form>
 
@@ -131,13 +120,10 @@ export default function Auth() {
             {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
             <button
               type="button"
-              onClick={() => {
-                setMode(isRegister ? "login" : "register");
-                setPassword("");
-              }}
+              onClick={toggle}
               className="font-medium text-primary hover:underline"
             >
-              {isRegister ? "Log in" : "Sign up"}
+              {isRegister ? "Log in" : "Register"}
             </button>
           </p>
         </CardContent>
